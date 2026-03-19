@@ -4,6 +4,7 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 out_dir="${script_dir}/out/data/data_import/preprocessing/data_preprocessing/stratify/data_stratify/default"
+compat_dir="${out_dir}/compat_data_import"
 
 rm -f "${out_dir}/data_stratify.train.matrix.tar.gz" \
       "${out_dir}/data_stratify.train.labels.tar.gz" \
@@ -20,3 +21,19 @@ rm -f "${out_dir}/data_stratify.train.matrix.tar.gz" \
   --data.true_labels "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.test.labels.tar.gz" \
   --data.label_key "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.label_key.json.gz" \
   "$@")
+
+mkdir -p "$compat_dir"
+ln -sfn "${out_dir}/data_stratify.train.matrix.tar.gz" "$compat_dir/data_import.train.matrix.tar.gz"
+ln -sfn "${out_dir}/data_stratify.train.labels.tar.gz" "$compat_dir/data_import.train.labels.tar.gz"
+ln -sfn "${out_dir}/data_stratify.test.matrices.tar.gz" "$compat_dir/data_import.test.matrices.tar.gz"
+ln -sfn "${out_dir}/data_stratify.test.labels.tar.gz" "$compat_dir/data_import.test.labels.tar.gz"
+ln -sfn "${out_dir}/data_stratify.label_key.json.gz" "$compat_dir/data_import.label_key.json.gz"
+
+for model in dgcytof gatemeclass deepcytof CyGATE random knn; do
+  model_out_dir="${repo_root}/models/${model}/out/data/data_preprocessing/default"
+  mkdir -p "$(dirname "$model_out_dir")"
+  if [[ -e "$model_out_dir" && ! -L "$model_out_dir" ]]; then
+    rm -rf "$model_out_dir"
+  fi
+  ln -sfn "$compat_dir" "$model_out_dir"
+done

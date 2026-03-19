@@ -12,3 +12,6 @@ Local quick run:
 ```bash
 bash run_data_stratify.sh
 ```
+
+The local helper also creates compatibility symlinks for local model bash scripts,
+mapping `data_import.*` filenames onto the stratified outputs.
