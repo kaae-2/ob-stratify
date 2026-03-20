@@ -5,12 +5,18 @@ script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 out_dir="${script_dir}/out/data/data_import/preprocessing/data_preprocessing/stratify/data_stratify/default"
 compat_dir="${out_dir}/compat_data_import"
+dataset_name="${1:-FR-FCM-Z2KP-covid}"
+
+if [[ $# -gt 0 ]]; then
+  shift
+fi
 
 rm -f "${out_dir}/data_stratify.train.matrix.tar.gz" \
       "${out_dir}/data_stratify.train.labels.tar.gz" \
       "${out_dir}/data_stratify.test.matrices.tar.gz" \
       "${out_dir}/data_stratify.test.labels.tar.gz" \
-      "${out_dir}/data_stratify.label_key.json.gz"
+      "${out_dir}/data_stratify.label_key.json.gz" \
+      "${out_dir}/data_stratify.order.json.gz"
 
 (cd "$repo_root" && python "stratify/data_stratify.py" \
   --name "data_stratify" \
@@ -20,6 +26,7 @@ rm -f "${out_dir}/data_stratify.train.matrix.tar.gz" \
   --data.test_matrix "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.test.matrices.tar.gz" \
   --data.true_labels "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.test.labels.tar.gz" \
   --data.label_key "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.label_key.json.gz" \
+  --data.metadata "${repo_root}/data/out/data/data_import/${dataset_name}.order.json.gz" \
   "$@")
 
 mkdir -p "$compat_dir"
@@ -28,6 +35,7 @@ ln -sfn "${out_dir}/data_stratify.train.labels.tar.gz" "$compat_dir/data_import.
 ln -sfn "${out_dir}/data_stratify.test.matrices.tar.gz" "$compat_dir/data_import.test.matrices.tar.gz"
 ln -sfn "${out_dir}/data_stratify.test.labels.tar.gz" "$compat_dir/data_import.test.labels.tar.gz"
 ln -sfn "${out_dir}/data_stratify.label_key.json.gz" "$compat_dir/data_import.label_key.json.gz"
+ln -sfn "${out_dir}/data_stratify.order.json.gz" "$compat_dir/data_import.order.json.gz"
 
 for model in dgcytof gatemeclass deepcytof CyGATE random knn; do
   model_out_dir="${repo_root}/models/${model}/out/data/data_preprocessing/default"

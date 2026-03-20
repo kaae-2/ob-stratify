@@ -197,6 +197,7 @@ def parse_args() -> argparse.ArgumentParser:
     parser.add_argument('--data.test_matrix', dest='data.test_matrix', required=True)
     parser.add_argument('--data.true_labels', dest='data.true_labels', required=True)
     parser.add_argument('--data.label_key', dest='data.label_key', required=True)
+    parser.add_argument('--data.metadata', dest='data.metadata', required=True)
     parser.add_argument('--output_dir', required=True)
     parser.add_argument('--name', default='data_stratify')
     parser.add_argument(
@@ -222,6 +223,7 @@ def main() -> None:
     test_matrix = Path(getattr(args, 'data.test_matrix'))
     true_labels = Path(getattr(args, 'data.true_labels'))
     label_key = Path(getattr(args, 'data.label_key'))
+    metadata_path = Path(getattr(args, 'data.metadata'))
     output_dir = Path(args.output_dir)
     name = args.name
 
@@ -230,6 +232,8 @@ def main() -> None:
             raise ValueError(f'Expected tar/tar.gz archive: {archive_path}')
     if not label_key.is_file():
         raise FileNotFoundError(f'Label key file does not exist: {label_key}')
+    if not metadata_path.is_file():
+        raise FileNotFoundError(f'Metadata file does not exist: {metadata_path}')
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -248,6 +252,7 @@ def main() -> None:
         drop_ungated_test=args.drop_ungated_test,
     )
     copy_if_needed(label_key, output_dir / f'{name}.label_key.json.gz')
+    copy_if_needed(metadata_path, output_dir / f'{name}.order.json.gz')
 
 
 if __name__ == '__main__':
