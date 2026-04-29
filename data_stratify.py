@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import io
+import json
 import shutil
 import tarfile
 import tempfile
@@ -127,6 +128,64 @@ def write_tar_from_paths(paths: Iterable[Path], output_path: Path) -> None:
 def copy_if_needed(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
+
+
+def build_stratification_config(
+    drop_ungated_training: bool,
+    drop_ungated_test: bool,
+) -> dict[str, object]:
+    selected_splits: list[str] = []
+    if drop_ungated_training:
+        selected_splits.append('training')
+    if drop_ungated_test:
+        selected_splits.append('test')
+
+    if len(selected_splits) == 2:
+        selection = 'training_and_test'
+    elif selected_splits:
+        selection = selected_splits[0]
+    else:
+        selection = 'none'
+
+    return {
+        'filter': 'drop_label_zero_rows',
+        'label_value': 0,
+        'selection': selection,
+        'selected_splits': selected_splits,
+        'drop_ungated_training': drop_ungated_training,
+        'drop_ungated_test': drop_ungated_test,
+    }
+
+
+def write_order_with_stratification(
+    metadata_path: Path,
+    output_path: Path,
+    drop_ungated_training: bool,
+    drop_ungated_test: bool,
+) -> None:
+    with gzip.open(metadata_path, 'rt', encoding='utf-8') as handle:
+        payload = json.load(handle)
+
+    if not isinstance(payload, dict):
+        raise ValueError(f'Expected dict payload in metadata file: {metadata_path}')
+
+    metadata = payload.get('metadata')
+    if metadata is None:
+        metadata = {}
+    elif not isinstance(metadata, dict):
+        raise ValueError(f'Expected metadata dict in metadata file: {metadata_path}')
+    else:
+        metadata = dict(metadata)
+
+    metadata['stratification'] = build_stratification_config(
+        drop_ungated_training=drop_ungated_training,
+        drop_ungated_test=drop_ungated_test,
+    )
+    payload['metadata'] = metadata
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(output_path, 'wt', encoding='utf-8') as handle:
+        json.dump(payload, handle, indent=2)
 
 
 def stratify_training(
@@ -252,7 +311,12 @@ def main() -> None:
         drop_ungated_test=args.drop_ungated_test,
     )
     copy_if_needed(label_key, output_dir / f'{name}.label_key.json.gz')
-    copy_if_needed(metadata_path, output_dir / f'{name}.order.json.gz')
+    write_order_with_stratification(
+        metadata_path=metadata_path,
+        output_path=output_dir / f'{name}.order.json.gz',
+        drop_ungated_training=args.drop_ungated_training,
+        drop_ungated_test=args.drop_ungated_test,
+    )
 
 
 if __name__ == '__main__':
