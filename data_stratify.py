@@ -256,7 +256,8 @@ def parse_args() -> argparse.ArgumentParser:
     parser.add_argument('--data.test_matrix', dest='data.test_matrix', required=True)
     parser.add_argument('--data.true_labels', dest='data.true_labels', required=True)
     parser.add_argument('--data.label_key', dest='data.label_key', required=True)
-    parser.add_argument('--data.metadata', dest='data.metadata', required=True)
+    parser.add_argument('--data.metadata', dest='data.metadata', required=False)
+    parser.add_argument('--data.order', dest='data.order', required=False)
     parser.add_argument('--output_dir', required=True)
     parser.add_argument('--name', default='data_stratify')
     parser.add_argument(
@@ -282,7 +283,10 @@ def main() -> None:
     test_matrix = Path(getattr(args, 'data.test_matrix'))
     true_labels = Path(getattr(args, 'data.true_labels'))
     label_key = Path(getattr(args, 'data.label_key'))
-    metadata_path = Path(getattr(args, 'data.metadata'))
+    metadata_value = getattr(args, 'data.metadata', None) or getattr(args, 'data.order', None)
+    if metadata_value is None:
+        raise SystemExit('Either --data.metadata or --data.order is required.')
+    metadata_path = Path(metadata_value)
     output_dir = Path(args.output_dir)
     name = args.name
 
