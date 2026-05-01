@@ -18,6 +18,39 @@ from typing import Iterable
 TAR_GZIP_COMPRESSLEVEL = 1
 
 
+def _copy_json_object(value):
+    return json.loads(json.dumps(value))
+
+
+def _populate_metadata_legacy_aliases(payload: dict) -> dict:
+    dataset = payload.get('dataset')
+    samples = payload.get('samples')
+    labels = payload.get('labels')
+    stages = payload.get('stages')
+
+    legacy_metadata = dict(dataset) if isinstance(dataset, dict) else {}
+    if isinstance(samples, dict):
+        for key in ('sample_names', 'cells_per_sample', 'sample_count'):
+            if key in samples:
+                legacy_metadata[key] = _copy_json_object(samples[key])
+    if isinstance(stages, dict):
+        stratify = stages.get('stratify')
+        if isinstance(stratify, dict) and 'stratification' in stratify:
+            legacy_metadata['stratification'] = _copy_json_object(
+                stratify['stratification']
+            )
+
+    payload['metadata'] = legacy_metadata
+    if isinstance(samples, dict) and 'order' in samples:
+        payload['order'] = _copy_json_object(samples['order'])
+    if isinstance(labels, dict):
+        if 'id_to_label' in labels:
+            payload['id_to_label'] = _copy_json_object(labels['id_to_label'])
+        if 'label_to_id' in labels:
+            payload['label_to_id'] = _copy_json_object(labels['label_to_id'])
+    return payload
+
+
 def is_tar_archive(path: Path) -> bool:
     if not path.is_file():
         return False
@@ -157,7 +190,7 @@ def build_stratification_config(
     }
 
 
-def write_order_with_stratification(
+def write_metadata_with_stratification(
     metadata_path: Path,
     output_path: Path,
     drop_ungated_training: bool,
@@ -169,19 +202,22 @@ def write_order_with_stratification(
     if not isinstance(payload, dict):
         raise ValueError(f'Expected dict payload in metadata file: {metadata_path}')
 
-    metadata = payload.get('metadata')
-    if metadata is None:
-        metadata = {}
-    elif not isinstance(metadata, dict):
-        raise ValueError(f'Expected metadata dict in metadata file: {metadata_path}')
+    stages = payload.get('stages')
+    if stages is None:
+        stages = {}
+    elif not isinstance(stages, dict):
+        raise ValueError(f'Expected stages dict in metadata file: {metadata_path}')
     else:
-        metadata = dict(metadata)
+        stages = dict(stages)
 
-    metadata['stratification'] = build_stratification_config(
-        drop_ungated_training=drop_ungated_training,
-        drop_ungated_test=drop_ungated_test,
-    )
-    payload['metadata'] = metadata
+    stages['stratify'] = {
+        'stratification': build_stratification_config(
+            drop_ungated_training=drop_ungated_training,
+            drop_ungated_test=drop_ungated_test,
+        )
+    }
+    payload['stages'] = stages
+    payload = _populate_metadata_legacy_aliases(payload)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(output_path, 'wt', encoding='utf-8') as handle:
@@ -255,9 +291,7 @@ def parse_args() -> argparse.ArgumentParser:
     parser.add_argument('--data.train_labels', dest='data.train_labels', required=True)
     parser.add_argument('--data.test_matrix', dest='data.test_matrix', required=True)
     parser.add_argument('--data.true_labels', dest='data.true_labels', required=True)
-    parser.add_argument('--data.label_key', dest='data.label_key', required=True)
-    parser.add_argument('--data.metadata', dest='data.metadata', required=False)
-    parser.add_argument('--data.order', dest='data.order', required=False)
+    parser.add_argument('--data.metadata', dest='data.metadata', required=True)
     parser.add_argument('--output_dir', required=True)
     parser.add_argument('--name', default='data_stratify')
     parser.add_argument(
@@ -282,19 +316,13 @@ def main() -> None:
     train_labels = Path(getattr(args, 'data.train_labels'))
     test_matrix = Path(getattr(args, 'data.test_matrix'))
     true_labels = Path(getattr(args, 'data.true_labels'))
-    label_key = Path(getattr(args, 'data.label_key'))
-    metadata_value = getattr(args, 'data.metadata', None) or getattr(args, 'data.order', None)
-    if metadata_value is None:
-        raise SystemExit('Either --data.metadata or --data.order is required.')
-    metadata_path = Path(metadata_value)
+    metadata_path = Path(getattr(args, 'data.metadata'))
     output_dir = Path(args.output_dir)
     name = args.name
 
     for archive_path in (train_matrix, train_labels, test_matrix, true_labels):
         if not is_tar_archive(archive_path):
             raise ValueError(f'Expected tar/tar.gz archive: {archive_path}')
-    if not label_key.is_file():
-        raise FileNotFoundError(f'Label key file does not exist: {label_key}')
     if not metadata_path.is_file():
         raise FileNotFoundError(f'Metadata file does not exist: {metadata_path}')
 
@@ -314,10 +342,9 @@ def main() -> None:
         name=name,
         drop_ungated_test=args.drop_ungated_test,
     )
-    copy_if_needed(label_key, output_dir / f'{name}.label_key.json.gz')
-    write_order_with_stratification(
+    write_metadata_with_stratification(
         metadata_path=metadata_path,
-        output_path=output_dir / f'{name}.order.json.gz',
+        output_path=output_dir / f'{name}.metadata.json.gz',
         drop_ungated_training=args.drop_ungated_training,
         drop_ungated_test=args.drop_ungated_test,
     )

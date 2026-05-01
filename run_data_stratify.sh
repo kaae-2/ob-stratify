@@ -15,8 +15,7 @@ rm -f "${out_dir}/data_stratify.train.matrix.tar.gz" \
       "${out_dir}/data_stratify.train.labels.tar.gz" \
       "${out_dir}/data_stratify.test.matrices.tar.gz" \
       "${out_dir}/data_stratify.test.labels.tar.gz" \
-      "${out_dir}/data_stratify.label_key.json.gz" \
-      "${out_dir}/data_stratify.order.json.gz"
+      "${out_dir}/data_stratify.metadata.json.gz"
 
 (cd "$repo_root" && python "stratify/data_stratify.py" \
   --name "data_stratify" \
@@ -25,8 +24,7 @@ rm -f "${out_dir}/data_stratify.train.matrix.tar.gz" \
   --data.train_labels "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.train.labels.tar.gz" \
   --data.test_matrix "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.test.matrices.tar.gz" \
   --data.true_labels "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.test.labels.tar.gz" \
-  --data.label_key "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.label_key.json.gz" \
-  --data.metadata "${repo_root}/data/out/data/data_import/${dataset_name}.order.json.gz" \
+  --data.metadata "${repo_root}/preprocessing/out/data/data_import/preprocessing/data_preprocessing/default/data_import.metadata.json.gz" \
   "$@")
 
 mkdir -p "$compat_dir"
@@ -34,8 +32,7 @@ ln -sfn "${out_dir}/data_stratify.train.matrix.tar.gz" "$compat_dir/data_import.
 ln -sfn "${out_dir}/data_stratify.train.labels.tar.gz" "$compat_dir/data_import.train.labels.tar.gz"
 ln -sfn "${out_dir}/data_stratify.test.matrices.tar.gz" "$compat_dir/data_import.test.matrices.tar.gz"
 ln -sfn "${out_dir}/data_stratify.test.labels.tar.gz" "$compat_dir/data_import.test.labels.tar.gz"
-ln -sfn "${out_dir}/data_stratify.label_key.json.gz" "$compat_dir/data_import.label_key.json.gz"
-ln -sfn "${out_dir}/data_stratify.order.json.gz" "$compat_dir/data_import.order.json.gz"
+ln -sfn "${out_dir}/data_stratify.metadata.json.gz" "$compat_dir/data_import.metadata.json.gz"
 
 for model in dgcytof gatemeclass deepcytof CyGATE cyanno LDA random knn; do
   model_out_dir="${repo_root}/models/${model}/out/data/data_preprocessing/default"
