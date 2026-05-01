@@ -37,7 +37,7 @@ ln -sfn "${out_dir}/data_stratify.test.labels.tar.gz" "$compat_dir/data_import.t
 ln -sfn "${out_dir}/data_stratify.label_key.json.gz" "$compat_dir/data_import.label_key.json.gz"
 ln -sfn "${out_dir}/data_stratify.order.json.gz" "$compat_dir/data_import.order.json.gz"
 
-for model in dgcytof gatemeclass deepcytof CyGATE random knn; do
+for model in dgcytof gatemeclass deepcytof CyGATE cyanno LDA random knn; do
   model_out_dir="${repo_root}/models/${model}/out/data/data_preprocessing/default"
   mkdir -p "$(dirname "$model_out_dir")"
   if [[ -e "$model_out_dir" && ! -L "$model_out_dir" ]]; then
