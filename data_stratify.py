@@ -287,11 +287,16 @@ def stratify_test(
 
 def parse_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--data.train_matrix', dest='data.train_matrix', required=True)
-    parser.add_argument('--data.train_labels', dest='data.train_labels', required=True)
-    parser.add_argument('--data.test_matrix', dest='data.test_matrix', required=True)
-    parser.add_argument('--data.true_labels', dest='data.true_labels', required=True)
-    parser.add_argument('--data.metadata', dest='data.metadata', required=True)
+    parser.add_argument('--data.train_matrix', dest='data.train_matrix', required=False)
+    parser.add_argument('--data.train_labels', dest='data.train_labels', required=False)
+    parser.add_argument('--data.test_matrix', dest='data.test_matrix', required=False)
+    parser.add_argument('--data.true_labels', dest='data.true_labels', required=False)
+    parser.add_argument('--data.metadata', dest='data.metadata', required=False)
+    parser.add_argument('--data.pre_train_matrix', dest='data.pre_train_matrix', required=False)
+    parser.add_argument('--data.pre_train_labels', dest='data.pre_train_labels', required=False)
+    parser.add_argument('--data.pre_test_matrix', dest='data.pre_test_matrix', required=False)
+    parser.add_argument('--data.pre_true_labels', dest='data.pre_true_labels', required=False)
+    parser.add_argument('--data.pre_metadata', dest='data.pre_metadata', required=False)
     parser.add_argument('--output_dir', required=True)
     parser.add_argument('--name', default='data_stratify')
     parser.add_argument(
@@ -312,11 +317,36 @@ def parse_args() -> argparse.ArgumentParser:
 def main() -> None:
     args = parse_args().parse_args()
 
-    train_matrix = Path(getattr(args, 'data.train_matrix'))
-    train_labels = Path(getattr(args, 'data.train_labels'))
-    test_matrix = Path(getattr(args, 'data.test_matrix'))
-    true_labels = Path(getattr(args, 'data.true_labels'))
-    metadata_path = Path(getattr(args, 'data.metadata'))
+    train_matrix_value = getattr(args, 'data.train_matrix', None) or getattr(
+        args, 'data.pre_train_matrix', None
+    )
+    train_labels_value = getattr(args, 'data.train_labels', None) or getattr(
+        args, 'data.pre_train_labels', None
+    )
+    test_matrix_value = getattr(args, 'data.test_matrix', None) or getattr(
+        args, 'data.pre_test_matrix', None
+    )
+    true_labels_value = getattr(args, 'data.true_labels', None) or getattr(
+        args, 'data.pre_true_labels', None
+    )
+    metadata_value = getattr(args, 'data.metadata', None) or getattr(
+        args, 'data.pre_metadata', None
+    )
+
+    if (
+        train_matrix_value is None
+        or train_labels_value is None
+        or test_matrix_value is None
+        or true_labels_value is None
+        or metadata_value is None
+    ):
+        raise SystemExit('Missing one or more required stratify inputs.')
+
+    train_matrix = Path(train_matrix_value)
+    train_labels = Path(train_labels_value)
+    test_matrix = Path(test_matrix_value)
+    true_labels = Path(true_labels_value)
+    metadata_path = Path(metadata_value)
     output_dir = Path(args.output_dir)
     name = args.name
 
